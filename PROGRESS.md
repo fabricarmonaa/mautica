@@ -7,10 +7,12 @@
 - **Endpoints ADMIN**: ABM básico de pedidos (`/admin/orders`), pagos (`/admin/payments`), caja (`/admin/cash`), facturas (`/admin/invoices`); actualizaciones de estado de pedido y listados basados en read models.
 - **Endpoints USER**: historial de pedidos y pagos del usuario autenticado (`/me/orders`, `/me/payments`).
 - **Frontend RN**: stubs de listado para pedidos, pagos y caja, más flujo de comando IA con confirmación/rechazo simulados.
-- **Bootstrap**: arranque automático crea tenant raíz y SUPER_ADMIN configurable por `.env` para habilitar pruebas inmediatas sin seeds manuales.
+- **Bootstrap**: arranque automático crea tenant raíz y SUPER_ADMIN configurable por `.env` para habilitar pruebas inmediatas sin seeds manuales. Ahora el tenant raíz es determinístico (`root-tenant`) y el login acepta `tenant_id` vacío para el SUPER_ADMIN.
+- **Operaciones cross-tenant**: SUPER_ADMIN puede usar los endpoints de admin pasando `tenant_id` en query para crear el primer ADMIN/USER de un tenant recién creado.
+- **SPA web**: se añadió `frontend/spa` (Vite + React) con login real, creación/listado de tenants y panel básico de usuarios/pedidos/pagos/caja para ADMIN.
 
 ## Cobertura funcional actual
-- Endpoints funcionales: auth (`/auth/login`, `/auth/refresh`), panel SUPER_ADMIN (tenants alta/listado/cambio de estado), panel ADMIN para usuarios, pedidos, pagos, caja, facturas, IA (confirm/reject), panel USER para perfil, cambio de password y read de pedidos/pagos.
+- Endpoints funcionales: auth (`/auth/login`, `/auth/refresh`), panel SUPER_ADMIN (tenants alta/listado/cambio de estado), panel ADMIN para usuarios, pedidos, pagos, caja, facturas, IA (confirm/reject), panel USER para perfil, cambio de password y read de pedidos/pagos. SUPER_ADMIN puede ejecutar endpoints de admin especificando `tenant_id` en la query.
 - CQRS: read models actualizados inmediatamente en users/orders/payments/cash a partir de los comandos que registran eventos en `audit_events`.
 - IA: microservicio Python devuelve intent estructurado y resumen; backend aplica acciones solo tras confirmación humana (estado `PENDING` → `APPLIED`/`REJECTED`).
 

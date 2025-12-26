@@ -7,7 +7,7 @@ import { tenantService } from '../../application/tenantService.js';
 import { generateId } from '../../domain/utils/id.js';
 
 const loginSchema = z.object({
-  tenant_id: z.string(),
+  tenant_id: z.string().optional(),
   dni: z.string(),
   password: z.string()
 });
@@ -15,8 +15,9 @@ const loginSchema = z.object({
 export const authController = {
   login: async ({ res, body }) => {
     const parsed = loginSchema.parse(body || {});
-    const tenant = await tenantService.ensureActiveTenant(parsed.tenant_id);
-    const user = await usersRepository.findByDniWithinTenant(parsed.tenant_id, parsed.dni);
+    const tenantId = parsed.tenant_id || process.env.SUPER_ADMIN_TENANT_ID || 'root-tenant';
+    const tenant = await tenantService.ensureActiveTenant(tenantId);
+    const user = await usersRepository.findByDniWithinTenant(tenantId, parsed.dni);
     if (!user || !user.active) {
       const error = new Error('Invalid credentials');
       error.statusCode = 401;
@@ -29,7 +30,7 @@ export const authController = {
       throw error;
     }
     const tokenPayload = {
-      tenant_id: parsed.tenant_id,
+      tenant_id: tenantId,
       user_id: user.id,
       role: user.role,
       session_id: generateId(18)

@@ -6,13 +6,9 @@ import { usersRepository } from './domain/repositories/usersRepository.js';
 import { userProfilesRepository } from './domain/repositories/userProfilesRepository.js';
 import { auditEventsRepository } from './domain/repositories/auditEventsRepository.js';
 import { usersReadRepository } from './domain/repositories/usersReadRepository.js';
-import { generateId } from './domain/utils/id.js';
 
 export async function ensureBootstrapAdmin() {
-  const existing = await usersRepository.countByRole('SUPER_ADMIN');
-  if (existing > 0) return;
-
-  const tenantId = process.env.SUPER_ADMIN_TENANT_ID || generateId();
+  const tenantId = process.env.SUPER_ADMIN_TENANT_ID || 'root-tenant';
   const tenantName = process.env.SUPER_ADMIN_TENANT_NAME || 'Root Tenant';
 
   let tenant = await tenantsRepository.findById(tenantId);
@@ -30,16 +26,22 @@ export async function ensureBootstrapAdmin() {
   const last_name = process.env.SUPER_ADMIN_LAST_NAME || 'Admin';
 
   const password_hash = await hashPassword(password);
-  const user = await usersRepository.create({ tenant_id: tenant.id, dni, role: 'SUPER_ADMIN', password_hash, active: 1 });
-  await userProfilesRepository.create({ user_id: user.id, first_name, last_name, email, phone });
+  const existingUser = await usersRepository.findByDniWithinTenant(tenant.id, dni);
+  const user =
+    existingUser ||
+    (await usersRepository.create({ tenant_id: tenant.id, dni, role: 'SUPER_ADMIN', password_hash, active: 1 }));
 
-  await auditEventsRepository.append({
-    tenant_id: tenant.id,
-    aggregate_id: user.id,
-    type: 'USER_CREATED',
-    payload: { role: 'SUPER_ADMIN', dni, profile: { first_name, last_name, email, phone } }
-  });
+  if (!existingUser) {
+    await userProfilesRepository.create({ user_id: user.id, first_name, last_name, email, phone });
 
-  await usersReadRepository.refreshFromSources(tenant.id, user.id);
-  console.log(`Bootstrapped SUPER_ADMIN dni=${dni} tenant=${tenant.id}`);
+    await auditEventsRepository.append({
+      tenant_id: tenant.id,
+      aggregate_id: user.id,
+      type: 'USER_CREATED',
+      payload: { role: 'SUPER_ADMIN', dni, profile: { first_name, last_name, email, phone } }
+    });
+
+    await usersReadRepository.refreshFromSources(tenant.id, user.id);
+  }
+  console.log(`Bootstrapped SUPER_ADMIN dni=${dni} password=${password} tenant=${tenant.id}`);
 }

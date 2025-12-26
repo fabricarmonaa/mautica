@@ -14,7 +14,7 @@ function buildRouteRegex(path) {
     }
     return p;
   });
-  const regex = new RegExp(`^/${regexParts.join('/')}$`);
+  const regex = new RegExp(`^/${regexParts.join('/')}/?$`);
   return { regex, names };
 }
 

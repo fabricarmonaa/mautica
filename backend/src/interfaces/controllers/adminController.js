@@ -11,6 +11,7 @@ import { cashService } from '../../application/cashService.js';
 import { cashboxReadRepository } from '../../domain/repositories/cashboxReadRepository.js';
 import { invoiceService } from '../../application/invoiceService.js';
 import { invoicesRepository } from '../../domain/repositories/invoicesRepository.js';
+import { tenantService } from '../../application/tenantService.js';
 
 const createUserSchema = z.object({
   dni: z.string(),
@@ -75,7 +76,8 @@ const createInvoiceSchema = z.object({
 
 export const adminController = {
   listUsers: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const filters = {
       dni: context.query.get('dni') || undefined,
       name: context.query.get('name') || undefined,
@@ -85,41 +87,39 @@ export const adminController = {
     };
     const page = Number(context.query.get('page') || '1');
     const limit = Number(context.query.get('limit') || '20');
-    const users = await usersReadRepository.list({
-      tenant_id: context.user.tenant_id,
-      filters,
-      page,
-      limit
-    });
+    const users = await usersReadRepository.list({ tenant_id, filters, page, limit });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ users }));
   },
 
   createUser: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
     const payload = createUserSchema.parse(context.body || {});
-    const user = await userService.createUser({ tenant_id: context.user.tenant_id, payload });
+    const tenant_id = await resolveTenant(context);
+    const user = await userService.createUser({ tenant_id, payload });
     context.res.writeHead(201, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ user_id: user.id }));
   },
 
   updateUser: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
     const payload = updateUserSchema.parse(context.body || {});
+    const tenant_id = await resolveTenant(context);
     const userId = context.params.id;
-    const existing = await usersRepository.findById(userId, context.user.tenant_id);
+    const existing = await usersRepository.findById(userId, tenant_id);
     if (!existing) {
       const error = new Error('User not found');
       error.statusCode = 404;
       throw error;
     }
-    await userService.updateUser({ tenant_id: context.user.tenant_id, user_id: userId, payload });
+    await userService.updateUser({ tenant_id, user_id: userId, payload });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ updated: true }));
   },
 
   listOrders: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const filters = {
       user_id: context.query.get('user_id') || undefined,
       status: context.query.get('status') || undefined,
@@ -128,16 +128,17 @@ export const adminController = {
     };
     const page = Number(context.query.get('page') || '1');
     const limit = Number(context.query.get('limit') || '20');
-    const orders = await ordersReadRepository.list({ tenant_id: context.user.tenant_id, filters, page, limit });
+    const orders = await ordersReadRepository.list({ tenant_id, filters, page, limit });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ orders }));
   },
 
   createOrder: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const payload = createOrderSchema.parse(context.body || {});
     const order = await orderService.createOrder({
-      tenant_id: context.user.tenant_id,
+      tenant_id,
       user_id: payload.user_id,
       status_code: payload.status_code,
       items: payload.items,
@@ -149,22 +150,20 @@ export const adminController = {
   },
 
   updateOrderStatus: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const payload = updateOrderStatusSchema.parse(context.body || {});
-    await orderService.updateStatus({
-      tenant_id: context.user.tenant_id,
-      order_id: context.params.id,
-      status_code: payload.status_code
-    });
+    await orderService.updateStatus({ tenant_id, order_id: context.params.id, status_code: payload.status_code });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ updated: true }));
   },
 
   registerPayment: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const payload = registerPaymentSchema.parse(context.body || {});
     const payment = await paymentService.registerPayment({
-      tenant_id: context.user.tenant_id,
+      tenant_id,
       user_id: payload.user_id,
       method_code: payload.method_code,
       amount: payload.amount,
@@ -175,20 +174,22 @@ export const adminController = {
   },
 
   listPayments: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const page = Number(context.query.get('page') || '1');
     const limit = Number(context.query.get('limit') || '20');
     const user_id = context.query.get('user_id') || undefined;
-    const payments = await paymentsReadRepository.list({ tenant_id: context.user.tenant_id, user_id, page, limit });
+    const payments = await paymentsReadRepository.list({ tenant_id, user_id, page, limit });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ payments }));
   },
 
   createCash: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const payload = createCashSchema.parse(context.body || {});
     const movement = await cashService.createMovement({
-      tenant_id: context.user.tenant_id,
+      tenant_id,
       category_id: payload.category_id,
       category_name: payload.category_name,
       type: payload.type,
@@ -201,7 +202,8 @@ export const adminController = {
   },
 
   listCash: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const filters = {
       category: context.query.get('category') || undefined,
       method: context.query.get('method') || undefined,
@@ -210,16 +212,17 @@ export const adminController = {
     };
     const page = Number(context.query.get('page') || '1');
     const limit = Number(context.query.get('limit') || '20');
-    const cash = await cashboxReadRepository.list({ tenant_id: context.user.tenant_id, filters, page, limit });
+    const cash = await cashboxReadRepository.list({ tenant_id, filters, page, limit });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ cash }));
   },
 
   createInvoice: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const payload = createInvoiceSchema.parse(context.body || {});
     const invoice = await invoiceService.createInvoice({
-      tenant_id: context.user.tenant_id,
+      tenant_id,
       user_id: payload.user_id,
       template_id: payload.template_id,
       order_ids: payload.order_ids,
@@ -230,11 +233,19 @@ export const adminController = {
   },
 
   listInvoices: async context => {
-    await requireAuth(context, ['ADMIN']);
+    await requireAuth(context, ['ADMIN', 'SUPER_ADMIN']);
+    const tenant_id = await resolveTenant(context);
     const page = Number(context.query.get('page') || '1');
     const limit = Number(context.query.get('limit') || '20');
-    const invoices = await invoicesRepository.listByTenant(context.user.tenant_id, { page, limit });
+    const invoices = await invoicesRepository.listByTenant(tenant_id, { page, limit });
     context.res.writeHead(200, { 'Content-Type': 'application/json' });
     context.res.end(JSON.stringify({ invoices }));
   }
 };
+
+async function resolveTenant(context) {
+  const tenantIdOverride = context.query.get('tenant_id');
+  const tenant_id = context.user.role === 'SUPER_ADMIN' && tenantIdOverride ? tenantIdOverride : context.user.tenant_id;
+  await tenantService.ensureActiveTenant(tenant_id);
+  return tenant_id;
+}

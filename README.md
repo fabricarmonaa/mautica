@@ -68,6 +68,7 @@ Read models (materializadas):
 - `PATCH /super/tenants/status`
 
 ### Panel empresa (ADMIN/OWNER)
+> Nota: el SUPER_ADMIN ahora puede invocar estos endpoints para un tenant específico usando `?tenant_id=<id>` en la query, útil para crear el primer ADMIN de un tenant recién dado de alta.
 - `GET /admin/users`
 - `POST /admin/users`
 - `PATCH /admin/users/:id`
@@ -88,7 +89,22 @@ Read models (materializadas):
 - `POST /commands` (tenant_id, command | audio_base64, user_context) → intent estructurado (action + data), summary y transcript.
 
 ## Cómo levantar
-1. Copiar `.env.example` a `.env` y completar credenciales.
+1. Copiar `.env.example` a `.env` y completar credenciales. Ejemplo solicitado:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=Orbia
+   DB_POOL_SIZE=10
+   JWT_SECRET=sasasa
+   JWT_EXPIRES_IN=3600
+   BCRYPT_ROUNDS=10
+   AI_SERVICE_URL=http://localhost:8000
+   SUPER_ADMIN_TENANT_ID=root-tenant
+   SUPER_ADMIN_DNI=00000000
+   SUPER_ADMIN_PASSWORD=admin123
+   ```
 2. Backend Node:
    ```bash
    cd backend && npm install && npm run dev
@@ -99,7 +115,25 @@ Read models (materializadas):
    pip install -r requirements.txt
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
-4. Frontend: usar React Native CLI/Expo apuntando a endpoints anteriores (esqueleto en `frontend/`).
+4. Frontend:
+   - React Native: usar CLI/Expo apuntando al backend (stubs en `frontend/`).
+   - SPA React web: `cd frontend/spa && npm install && npm run dev` (Vite en puerto 5173 por defecto).
+
+### Pruebas rápidas (PowerShell / curl)
+```powershell
+# Login SUPER_ADMIN (tenant_id opcional gracias al fallback root-tenant)
+$body = '{"tenant_id":"root-tenant","dni":"00000000","password":"admin123"}'
+$login = Invoke-RestMethod -Uri "http://localhost:3000/auth/login" -Method Post -ContentType "application/json" -Body $body
+$TOKEN = $login.access_token
+
+# Crear tenant
+$tenantBody = '{"name":"Empresa Demo 1"}'
+Invoke-RestMethod -Uri "http://localhost:3000/super/tenants" -Method Post -Headers @{ Authorization = "Bearer $TOKEN" } -ContentType "application/json" -Body $tenantBody
+
+# Crear primer ADMIN para ese tenant desde SUPER_ADMIN (nuevo soporte tenant_id en query)
+$userBody = '{"dni":"1001","first_name":"Fabricio","last_name":"Admin","email":"admin@empresa.com","phone":"123456","role":"ADMIN","password":"admin123"}'
+Invoke-RestMethod -Uri "http://localhost:3000/admin/users?tenant_id=<TENANT_ID_NUEVO>" -Method Post -Headers @{ Authorization = "Bearer $TOKEN" } -ContentType "application/json" -Body $userBody
+```
 
 ### Bootstrap inicial (SUPER_ADMIN listo para usar)
 - Al iniciar el backend se crea automáticamente un tenant raíz y un usuario SUPER_ADMIN si no existen.
