@@ -101,6 +101,19 @@ Read models (materializadas):
    ```
 4. Frontend: usar React Native CLI/Expo apuntando a endpoints anteriores (esqueleto en `frontend/`).
 
+### Bootstrap inicial (SUPER_ADMIN listo para usar)
+- Al iniciar el backend se crea automáticamente un tenant raíz y un usuario SUPER_ADMIN si no existen.
+- Variables de entorno clave (definidas en `.env.example`):
+  - `SUPER_ADMIN_TENANT_ID`, `SUPER_ADMIN_TENANT_NAME`
+  - `SUPER_ADMIN_DNI`, `SUPER_ADMIN_PASSWORD`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PHONE`, `SUPER_ADMIN_FIRST_NAME`, `SUPER_ADMIN_LAST_NAME`
+- Inicio de sesión inicial (si no cambiaste variables):
+  ```bash
+  curl -X POST http://localhost:3000/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"tenant_id":"root-tenant","dni":"00000000","password":"admin123"}'
+  ```
+  Con el token obtenido puedes crear tenants (`/super/tenants`) y luego administrarlos.
+
 ## Ejemplos de peticiones
 ```bash
 curl -X POST http://localhost:3000/auth/login \\

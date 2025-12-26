@@ -7,6 +7,7 @@
 - **Endpoints ADMIN**: ABM básico de pedidos (`/admin/orders`), pagos (`/admin/payments`), caja (`/admin/cash`), facturas (`/admin/invoices`); actualizaciones de estado de pedido y listados basados en read models.
 - **Endpoints USER**: historial de pedidos y pagos del usuario autenticado (`/me/orders`, `/me/payments`).
 - **Frontend RN**: stubs de listado para pedidos, pagos y caja, más flujo de comando IA con confirmación/rechazo simulados.
+- **Bootstrap**: arranque automático crea tenant raíz y SUPER_ADMIN configurable por `.env` para habilitar pruebas inmediatas sin seeds manuales.
 
 ## Cobertura funcional actual
 - Endpoints funcionales: auth (`/auth/login`, `/auth/refresh`), panel SUPER_ADMIN (tenants alta/listado/cambio de estado), panel ADMIN para usuarios, pedidos, pagos, caja, facturas, IA (confirm/reject), panel USER para perfil, cambio de password y read de pedidos/pagos.

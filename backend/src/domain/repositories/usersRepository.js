@@ -33,6 +33,12 @@ class UsersRepository {
     const executor = connection || getPool();
     await executor.execute('UPDATE users SET password_hash = ? WHERE id = ? AND tenant_id = ?', [password_hash, id, tenant_id]);
   }
+
+  async countByRole(role) {
+    const pool = getPool();
+    const [rows] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = ?', [role]);
+    return Number(rows[0]?.count || 0);
+  }
 }
 
 export const usersRepository = new UsersRepository();

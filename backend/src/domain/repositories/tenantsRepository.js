@@ -2,8 +2,7 @@ import { getPool } from '../../infrastructure/db/mysqlPool.js';
 import { generateId } from '../utils/id.js';
 
 class TenantsRepository {
-  async create({ name, status = 'ACTIVE' }) {
-    const id = generateId();
+  async create({ id = generateId(), name, status = 'ACTIVE' }) {
     const pool = getPool();
     await pool.execute('INSERT INTO tenants (id, name, status) VALUES (?, ?, ?)', [id, name, status]);
     return { id, name, status };
